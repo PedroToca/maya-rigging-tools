@@ -49,10 +49,12 @@ Run inside Maya's Script Editor (Python tab):
 ```python
 # Example: run a QC check
 from qc.zero_transform_check import check_zero_transforms
+
 check_zero_transforms()
 
 # Example: build a leg
 from builders.limb_builder import build_limb
+
 build_limb(side="L_", limb="leg")
 ```
 
