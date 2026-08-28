@@ -42,14 +42,6 @@ Atomic scene-modifying tools — each does exactly one thing.
 | `builders/spine_builder.py` | *Planned* — spline IK spine with twist |
 | `builders/face_rig_assistant.py` | *Planned* — driven keys / blend shapes in batch |
 
-### Archive
-
-Learning artifacts kept for reference — superseded by the tools above.
-
-| Tool | Note |
-|---|---|
-| `archive/leg_builder.py` | First single-chain leg builder; redesigned into `limb_builder.py` |
-
 ## Usage
 
 Run inside Maya's Script Editor (Python tab):
