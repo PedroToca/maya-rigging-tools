@@ -39,7 +39,7 @@ Atomic scene-modifying tools — each does exactly one thing.
 | Tool | What it does |
 |---|---|
 | `builders/limb_builder.py` | Generic FK/IK limb builder with triple-chain (skin/FK/IK) architecture and FK/IK switch |
-| `builders/spine_builder.py` | *Planned* — spline IK spine with twist |
+| `builders/spine_builder.py` | Spline IK spine from 2 endpoints + editable curve — joints distributed via `pointOnCurve` (equidistant by design) |
 | `builders/face_rig_assistant.py` | *Planned* — driven keys / blend shapes in batch |
 
 ## Usage
