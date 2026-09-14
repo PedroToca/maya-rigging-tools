@@ -57,11 +57,17 @@ def create_limb_locators(side="L_", limb="leg"):
         None.
     """
     joint_names = LIMB_JOINTS[limb]
-    for name in joint_names:
+    for i, name in enumerate(joint_names):
         # Two-pass flow: keep existing locators (already positioned by the
         # artist). Re-creating would spawn suffixed duplicates at the origin.
-        if not cmds.objExists(f"{side}{name}_loc"):
-            cmds.spaceLocator(name=f"{side}{name}_loc")
+        if cmds.objExists(f"{side}{name}_loc"):
+            continue
+        loc = cmds.spaceLocator(name=f"{side}{name}_loc")[0]
+        # A perfectly straight chain cannot bend: the IK solver has no
+        # preferred direction. Nudge the middle joint (knee/elbow) slightly
+        # so the default setup is always bendable.
+        if i == 1:
+            cmds.setAttr(loc + ".tz", 0.5)
 
 
 def create_joint_chain(side="L_", limb="leg", chain_type="skin"):
@@ -209,6 +215,9 @@ def create_ik(side, limb):
     Notes:
         - ikRPsolver (rotate plane) is required for poleVectorConstraint to work.
         - Indexing assumes a 3-joint chain: [0] start, [1] middle, [-1] end.
+        - The PV control is placed OFF the chain line (+Z offset): a pole
+          vector sitting on the chain axis leaves the twist plane undefined
+          and the middle joint will not bend.
     """
     joint_names = LIMB_JOINTS[limb]
     first_joint = f"{side}{joint_names[0]}_ik_jnt"
@@ -229,8 +238,11 @@ def create_ik(side, limb):
 
     cmds.pointConstraint(ik_ctl, ik_handle, maintainOffset=True)
 
-    # Pole vector at the middle joint steers the chain's bend direction
+    # Pole vector steers the bend direction: offset it out of the chain
+    # line toward the character front (+Z) so the twist plane is defined.
+    pv_offset = 4.0
     pv_pos = cmds.xform(middle_joint, query=True, worldSpace=True, translation=True)
+    pv_pos = [pv_pos[0], pv_pos[1], pv_pos[2] + pv_offset]
     off, pv_ctl = make_controller_at_position(f"{limb}PV", side, pv_pos)
     cmds.poleVectorConstraint(pv_ctl, ik_handle)
 
