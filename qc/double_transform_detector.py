@@ -34,13 +34,14 @@ def has_transform(node, tolerance=0.001):
     Returns:
         bool: True if the node has any translate OR rotate value above tolerance.
     """
-    rotations = cmds.getAttr(node + ".rotate")
+    # getAttr on compound attrs returns [(x, y, z)] — [0] grabs the tuple
+    rotations = cmds.getAttr(node + ".rotate")[0]
     rot = False
     for rot_val in rotations:
         if abs(rot_val) > tolerance:
             rot = True
     trans = False
-    translation = cmds.getAttr(node + ".translate")
+    translation = cmds.getAttr(node + ".translate")[0]
     for trans_val in translation:
         if abs(trans_val) > tolerance:
             trans = True

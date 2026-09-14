@@ -38,8 +38,9 @@ def check_zero_transforms():
     violation = []
     for item in selection:
         is_violation = False
-        translationlist = cmds.getAttr(item + ".translate")
-        rotationlist = cmds.getAttr(item + ".rotate")
+        # getAttr on compound attrs returns [(x, y, z)] — [0] grabs the tuple
+        translationlist = cmds.getAttr(item + ".translate")[0]
+        rotationlist = cmds.getAttr(item + ".rotate")[0]
         for transform in translationlist:
             if abs(transform) > 0.001:
                 is_violation = True

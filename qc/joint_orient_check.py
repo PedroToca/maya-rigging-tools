@@ -36,9 +36,9 @@ def check_joint_orient(tolerance=0.001):
         return
 
     for item in joints:
-        # getAttr on .rotate returns a tuple (x, y, z) — iterate each axis
-        trans = cmds.getAttr(item + ".rotate")
+        # getAttr on .rotate returns [(x, y, z)] — [0] grabs the axis tuple
+        trans = cmds.getAttr(item + ".rotate")[0]
         for valor in trans:
             # abs() so negative rotations are flagged too (-3 IS a rotation)
             if abs(valor) > tolerance:
-                print(f"'{item}' have trasformation")
+                print(f"'{item}' has rotation in .rotate")
