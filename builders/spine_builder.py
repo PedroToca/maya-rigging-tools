@@ -122,7 +122,7 @@ def create_spine_ik():
         str: The IK handle name.
     """
     joints = cmds.ls("C_spine*_jnt") or []
-    handle, _effector = cmds.ikHandle(
+    handle, effector = cmds.ikHandle(
         name="C_spineIKHandle",
         startJoint=joints[0],
         endEffector=joints[-1],
@@ -130,6 +130,13 @@ def create_spine_ik():
         curve="C_spine_crv",
         createCurve=False,
     )
+    # Maya 2027 regression: the end effector lands one joint short of the
+    # target (on its parent), silently cutting the last joint out of the
+    # solve. Detect and repair so the chain reaches the last spine joint.
+    if joints[-1] not in cmds.ikHandle(handle, query=True, jointList=True):
+        cmds.parent(effector, joints[-1])
+        if joints[-1] not in cmds.ikHandle(handle, query=True, jointList=True):
+            cmds.warning(f"ikHandle {handle}: solve chain does not reach {joints[-1]}")
     return handle
 
 

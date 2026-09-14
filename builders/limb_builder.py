@@ -231,6 +231,14 @@ def create_ik(side, limb):
         endEffector=last_joint,
         solver="ikRPsolver"
     )
+    # Maya 2027 regression: the auto-created end effector lands on the last
+    # joint's PARENT, cutting the last joint out of the solve chain (the
+    # docs say it should sit at the joint itself). Detect the short chain
+    # and repair it by re-parenting the effector onto the end joint.
+    if last_joint not in cmds.ikHandle(ik_handle, query=True, jointList=True):
+        cmds.parent(ik_effector, last_joint)
+        if last_joint not in cmds.ikHandle(ik_handle, query=True, jointList=True):
+            cmds.warning(f"ikHandle {ik_handle}: solve chain does not reach {last_joint}")
 
     # End control at the last joint — driver first, driven second
     pos = cmds.xform(last_joint, query=True, worldSpace=True, translation=True)
