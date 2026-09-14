@@ -18,7 +18,7 @@ Workflow (two-phase, like limb_builder):
     build_spine(phase="build")   # joints + spline IK + controls
 
 Requirements:
-    - controller_maker.make_controller_at_position in the same PYTHONPATH
+    - setup.controller_maker.make_controller_at_position (returns (_off, _ctl))
     - Naming: C_ prefix (center), _loc / _crv / _jnt / _cl / _ctl suffixes
 
 Examples:
@@ -27,7 +27,7 @@ Examples:
 """
 
 import maya.cmds as cmds
-from controller_maker import make_controller_at_position
+from setup.controller_maker import make_controller_at_position
 
 
 def lerp(a, b, t):
@@ -55,6 +55,11 @@ def create_spine_endpoints(height=20.0):
     Returns:
         None. Creates C_hips_loc and C_chest_loc.
     """
+    # Two-pass flow: keep existing locators (already positioned by the
+    # artist). Re-creating would spawn suffixed duplicates and reset the
+    # chest to default height.
+    if cmds.objExists("C_hips_loc") and cmds.objExists("C_chest_loc"):
+        return
     cmds.spaceLocator(name="C_hips_loc")
     chest = cmds.spaceLocator(name="C_chest_loc")[0]
     cmds.setAttr(chest + ".ty", height)

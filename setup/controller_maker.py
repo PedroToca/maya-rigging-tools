@@ -33,7 +33,8 @@ def make_controller(name, side="L_"):
         side (str): Side prefix. Defaults to "L_". Expected: "L_", "R_", "C_".
 
     Returns:
-        None. Nodes created: {side}{name}_ctl/_grp/_auto/_off.
+        tuple(str, str): (_off, _ctl) node names, so callers can keep
+        references instead of guessing names back from the scene.
     """
     controllername = (side + name)
     # circle returns [transform, shape] — [0] grabs the transform we parent
@@ -47,6 +48,7 @@ def make_controller(name, side="L_"):
     cmds.parent(auto, off)
 
     cmds.makeIdentity(ctl, apply=True, t=True, r=True, s=True)
+    return off, ctl
 
 
 def make_controller_at_position(name, side="L_", position=(0, 0, 0)):
@@ -62,8 +64,8 @@ def make_controller_at_position(name, side="L_", position=(0, 0, 0)):
         position (tuple): World-space (x, y, z) position. Defaults to origin.
 
     Returns:
-        None.
+        tuple(str, str): (_off, _ctl) node names.
     """
-    make_controller(name, side)
-    off_name = side + name + "_off"
-    cmds.xform(off_name, worldSpace=True, translation=position)
+    off, ctl = make_controller(name, side)
+    cmds.xform(off, worldSpace=True, translation=position)
+    return off, ctl
