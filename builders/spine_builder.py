@@ -18,7 +18,7 @@ Workflow (two-phase, like limb_builder):
     build_spine(phase="build")   # joints + spline IK + controls
 
 Requirements:
-    - setup.controller_maker.make_controller_at_position (returns (_off, _ctl))
+    - controller_maker.make_controller_at_position in the same PYTHONPATH
     - Naming: C_ prefix (center), _loc / _crv / _jnt / _cl / _ctl suffixes
 
 Examples:
@@ -55,11 +55,6 @@ def create_spine_endpoints(height=20.0):
     Returns:
         None. Creates C_hips_loc and C_chest_loc.
     """
-    # Two-pass flow: keep existing locators (already positioned by the
-    # artist). Re-creating would spawn suffixed duplicates and reset the
-    # chest to default height.
-    if cmds.objExists("C_hips_loc") and cmds.objExists("C_chest_loc"):
-        return
     cmds.spaceLocator(name="C_hips_loc")
     chest = cmds.spaceLocator(name="C_chest_loc")[0]
     cmds.setAttr(chest + ".ty", height)
@@ -122,7 +117,7 @@ def create_spine_ik():
         str: The IK handle name.
     """
     joints = cmds.ls("C_spine*_jnt") or []
-    handle, effector = cmds.ikHandle(
+    handle, _effector = cmds.ikHandle(
         name="C_spineIKHandle",
         startJoint=joints[0],
         endEffector=joints[-1],
@@ -130,16 +125,6 @@ def create_spine_ik():
         curve="C_spine_crv",
         createCurve=False,
     )
-    # Maya 2027 regression: the end effector lands one joint short of the
-    # target (on its parent), silently cutting the last joint out of the
-    # solve. Detect and repair so the chain reaches the last spine joint.
-    if joints[-1] not in cmds.ikHandle(handle, query=True, jointList=True):
-        # relative=True keeps the effector's LOCAL transform (identity), so it
-        # lands exactly on the last joint. Default parenting preserves WORLD
-        # position, which offsets the solve target off the joint.
-        cmds.parent(effector, joints[-1], relative=True)
-        if joints[-1] not in cmds.ikHandle(handle, query=True, jointList=True):
-            cmds.warning(f"ikHandle {handle}: solve chain does not reach {joints[-1]}")
     return handle
 
 

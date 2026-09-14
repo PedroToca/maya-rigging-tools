@@ -57,17 +57,8 @@ def create_limb_locators(side="L_", limb="leg"):
         None.
     """
     joint_names = LIMB_JOINTS[limb]
-    for i, name in enumerate(joint_names):
-        # Two-pass flow: keep existing locators (already positioned by the
-        # artist). Re-creating would spawn suffixed duplicates at the origin.
-        if cmds.objExists(f"{side}{name}_loc"):
-            continue
-        loc = cmds.spaceLocator(name=f"{side}{name}_loc")[0]
-        # A perfectly straight chain cannot bend: the IK solver has no
-        # preferred direction. Nudge the middle joint (knee/elbow) slightly
-        # so the default setup is always bendable.
-        if i == 1:
-            cmds.setAttr(loc + ".tz", 0.5)
+    for name in joint_names:
+        cmds.spaceLocator(name=f"{side}{name}_loc")
 
 
 def create_joint_chain(side="L_", limb="leg", chain_type="skin"):
@@ -215,9 +206,6 @@ def create_ik(side, limb):
     Notes:
         - ikRPsolver (rotate plane) is required for poleVectorConstraint to work.
         - Indexing assumes a 3-joint chain: [0] start, [1] middle, [-1] end.
-        - The PV control is placed OFF the chain line (+Z offset): a pole
-          vector sitting on the chain axis leaves the twist plane undefined
-          and the middle joint will not bend.
     """
     joint_names = LIMB_JOINTS[limb]
     first_joint = f"{side}{joint_names[0]}_ik_jnt"
@@ -231,17 +219,6 @@ def create_ik(side, limb):
         endEffector=last_joint,
         solver="ikRPsolver"
     )
-    # Maya 2027 regression: the auto-created end effector lands on the last
-    # joint's PARENT, cutting the last joint out of the solve chain (the
-    # docs say it should sit at the joint itself). Detect the short chain
-    # and repair it by re-parenting the effector onto the end joint.
-    if last_joint not in cmds.ikHandle(ik_handle, query=True, jointList=True):
-        # relative=True keeps the effector's LOCAL transform (identity), so it
-        # lands exactly on the end joint. Default parenting preserves WORLD
-        # position, which offsets the solve target off the joint.
-        cmds.parent(ik_effector, last_joint, relative=True)
-        if last_joint not in cmds.ikHandle(ik_handle, query=True, jointList=True):
-            cmds.warning(f"ikHandle {ik_handle}: solve chain does not reach {last_joint}")
 
     # End control at the last joint — driver first, driven second
     pos = cmds.xform(last_joint, query=True, worldSpace=True, translation=True)
@@ -249,11 +226,8 @@ def create_ik(side, limb):
 
     cmds.pointConstraint(ik_ctl, ik_handle, maintainOffset=True)
 
-    # Pole vector steers the bend direction: offset it out of the chain
-    # line toward the character front (+Z) so the twist plane is defined.
-    pv_offset = 4.0
+    # Pole vector at the middle joint steers the chain's bend direction
     pv_pos = cmds.xform(middle_joint, query=True, worldSpace=True, translation=True)
-    pv_pos = [pv_pos[0], pv_pos[1], pv_pos[2] + pv_offset]
     off, pv_ctl = make_controller_at_position(f"{limb}PV", side, pv_pos)
     cmds.poleVectorConstraint(pv_ctl, ik_handle)
 
@@ -262,10 +236,7 @@ def connect_chains(side, limb):
     """
     Brief: parentConstrain every FK and IK joint onto its skin counterpart.
 
-    Each skin joint is constrained by both FK and IK. Depending on Maya
-    version this results in ONE parentConstraint per driver (2025/2026)
-    or a SINGLE merged constraint holding both targets (2027). Callers must
-    not assume the node layout — resolve targets via targetList instead.
+    Each skin joint receives TWO parentConstraints (one from FK, one from IK).
     Their weights are both 1.0 at creation, so the skin averages both chains —
     the switch in create_switch() is what makes only one active at a time.
 
@@ -312,33 +283,16 @@ def create_switch(side, limb, constraints):
 
     Returns:
         None.
-
-    Notes:
-        - Constraint weight plugs are named "<driverNode>W<targetIndex>",
-          not "targetW0" — that generic name never exists for named drivers.
-        - Maya 2025/2026 create one constraint per driver (driver is always
-          W0); Maya 2027 merges both drivers into one constraint with two
-          targets (FK=W0, IK=W1). Resolving the index from targetList
-          handles both layouts.
     """
     ik_ctl = f"{side}{limb}IK_ctl"
     cmds.addAttr(ik_ctl, longName="fkik", attributeType="float", minValue=0, maxValue=1, defaultValue=1)
     # One reverse node serves the whole limb
     reverse = cmds.createNode("reverse")
     cmds.connectAttr(f"{ik_ctl}.fkik", f"{reverse}.inputX")
-    joint_names = LIMB_JOINTS[limb]
-    for (fk_con, ik_con), name in zip(constraints, joint_names):
-        fk_joint = f"{side}{name}_fk_jnt"
-        ik_joint = f"{side}{name}_ik_jnt"
-        # Weight plugs follow the "<driverNode>W<targetIndex>" convention
-        # (e.g. L_legUp_fk_jntW0). The index comes from targetList because
-        # merged constraints (2027) put FK at slot 0 and IK at slot 1.
-        fk_targets = cmds.parentConstraint(fk_con, query=True, targetList=True)
-        ik_targets = cmds.parentConstraint(ik_con, query=True, targetList=True)
-        fk_plug = f"{fk_con}.{fk_joint}W{fk_targets.index(fk_joint)}"
-        ik_plug = f"{ik_con}.{ik_joint}W{ik_targets.index(ik_joint)}"
-        cmds.connectAttr(f"{reverse}.outputX", fk_plug)
-        cmds.connectAttr(f"{ik_ctl}.fkik", ik_plug)
+    for fk_con, ik_con in constraints:
+        # Each constraint has a single target, so its weight is always targetW0
+        cmds.connectAttr(f"{reverse}.outputX", f"{fk_con}.targetW0")
+        cmds.connectAttr(f"{ik_ctl}.fkik", f"{ik_con}.targetW0")
 
 
 def build_limb(side="L_", limb="leg"):
