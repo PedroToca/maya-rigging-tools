@@ -134,7 +134,10 @@ def create_spine_ik():
     # target (on its parent), silently cutting the last joint out of the
     # solve. Detect and repair so the chain reaches the last spine joint.
     if joints[-1] not in cmds.ikHandle(handle, query=True, jointList=True):
-        cmds.parent(effector, joints[-1])
+        # relative=True keeps the effector's LOCAL transform (identity), so it
+        # lands exactly on the last joint. Default parenting preserves WORLD
+        # position, which offsets the solve target off the joint.
+        cmds.parent(effector, joints[-1], relative=True)
         if joints[-1] not in cmds.ikHandle(handle, query=True, jointList=True):
             cmds.warning(f"ikHandle {handle}: solve chain does not reach {joints[-1]}")
     return handle

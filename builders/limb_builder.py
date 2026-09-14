@@ -236,7 +236,10 @@ def create_ik(side, limb):
     # docs say it should sit at the joint itself). Detect the short chain
     # and repair it by re-parenting the effector onto the end joint.
     if last_joint not in cmds.ikHandle(ik_handle, query=True, jointList=True):
-        cmds.parent(ik_effector, last_joint)
+        # relative=True keeps the effector's LOCAL transform (identity), so it
+        # lands exactly on the end joint. Default parenting preserves WORLD
+        # position, which offsets the solve target off the joint.
+        cmds.parent(ik_effector, last_joint, relative=True)
         if last_joint not in cmds.ikHandle(ik_handle, query=True, jointList=True):
             cmds.warning(f"ikHandle {ik_handle}: solve chain does not reach {last_joint}")
 
