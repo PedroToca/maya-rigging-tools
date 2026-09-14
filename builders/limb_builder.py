@@ -132,7 +132,7 @@ def make_controller(name, side="L_"):
     Returns:
         tuple: (off_name, ctl_name) so callers can chain and parent.
     """
-    controllername = (side + name)
+    controllername = side + name
     # circle returns [transform, shape] — [0] grabs the transform
     ctl = cmds.circle(name=controllername + "_ctl")[0]
     grp = cmds.group(name=controllername + "_grp")
@@ -187,7 +187,9 @@ def create_fk_controls(side="L_", limb="leg"):
     for name in joint_names:
         # World-space position (xform ws=True), because a chained joint's
         # .translate is LOCAL to its parent, not world
-        pos = cmds.xform(f"{side}{name}_fk_jnt", query=True, worldSpace=True, translation=True)
+        pos = cmds.xform(
+            f"{side}{name}_fk_jnt", query=True, worldSpace=True, translation=True
+        )
         off, ctl = make_controller_at_position(f"{name}_fk", side, pos)
         joint = f"{side}{name}_fk_jnt"
         cmds.parent(joint, ctl)
@@ -222,22 +224,22 @@ def create_ik(side, limb):
     middle_joint = f"{side}{joint_names[1]}_ik_jnt"
 
     # ikHandle returns [handle, effector] — the handle is what the control drives
-    ik_handle, ik_effector = cmds.ikHandle(
+    ik_handle, _effector = cmds.ikHandle(
         name=f"{side}{limb}IKHandle",
         startJoint=first_joint,
         endEffector=last_joint,
-        solver="ikRPsolver"
+        solver="ikRPsolver",
     )
 
     # End control at the last joint — driver first, driven second
     pos = cmds.xform(last_joint, query=True, worldSpace=True, translation=True)
-    off, ik_ctl = make_controller_at_position(f"{limb}IK", side, pos)
+    _off, ik_ctl = make_controller_at_position(f"{limb}IK", side, pos)
 
     cmds.pointConstraint(ik_ctl, ik_handle, maintainOffset=True)
 
     # Pole vector at the middle joint steers the chain's bend direction
     pv_pos = cmds.xform(middle_joint, query=True, worldSpace=True, translation=True)
-    off, pv_ctl = make_controller_at_position(f"{limb}PV", side, pv_pos)
+    _off, pv_ctl = make_controller_at_position(f"{limb}PV", side, pv_pos)
     cmds.poleVectorConstraint(pv_ctl, ik_handle)
 
 
@@ -294,14 +296,25 @@ def create_switch(side, limb, constraints):
         None.
     """
     ik_ctl = f"{side}{limb}IK_ctl"
-    cmds.addAttr(ik_ctl, longName="fkik", attributeType="float", minValue=0, maxValue=1, defaultValue=1)
+    cmds.addAttr(
+        ik_ctl,
+        longName="fkik",
+        attributeType="float",
+        minValue=0,
+        maxValue=1,
+        defaultValue=1,
+    )
     # One reverse node serves the whole limb
     reverse = cmds.createNode("reverse")
     cmds.connectAttr(f"{ik_ctl}.fkik", f"{reverse}.inputX")
-    for fk_con, ik_con in constraints:
-        # Each constraint has a single target, so its weight is always targetW0
-        cmds.connectAttr(f"{reverse}.outputX", f"{fk_con}.targetW0")
-        cmds.connectAttr(f"{ik_ctl}.fkik", f"{ik_con}.targetW0")
+    joint_names = LIMB_JOINTS[limb]
+    for (fk_con, ik_con), name in zip(constraints, joint_names):
+        fk_joint = f"{side}{name}_fk_jnt"
+        ik_joint = f"{side}{name}_ik_jnt"
+        # Constraint weight plugs are named "<driverNode>W<targetIndex>":
+        # FK sits at slot 0, IK at slot 1 (merged constraint, Maya 2027).
+        cmds.connectAttr(f"{reverse}.outputX", f"{fk_con}.{fk_joint}W0")
+        cmds.connectAttr(f"{ik_ctl}.fkik", f"{ik_con}.{ik_joint}W1")
 
 
 def build_limb(side="L_", limb="leg"):
