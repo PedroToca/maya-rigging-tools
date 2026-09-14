@@ -57,8 +57,17 @@ def create_limb_locators(side="L_", limb="leg"):
         None.
     """
     joint_names = LIMB_JOINTS[limb]
-    for name in joint_names:
-        cmds.spaceLocator(name=f"{side}{name}_loc")
+    for i, name in enumerate(joint_names):
+        # Two-pass flow: keep existing locators (already positioned by the
+        # artist). Re-creating would spawn suffixed duplicates at the origin.
+        if cmds.objExists(f"{side}{name}_loc"):
+            continue
+        loc = cmds.spaceLocator(name=f"{side}{name}_loc")[0]
+        # A perfectly straight chain cannot bend: the IK solver has no
+        # preferred direction. Nudge the middle joint (knee/elbow) slightly
+        # so the default setup is always bendable.
+        if i == 1:
+            cmds.setAttr(loc + ".tz", 0.5)
 
 
 def create_joint_chain(side="L_", limb="leg", chain_type="skin"):
@@ -283,16 +292,33 @@ def create_switch(side, limb, constraints):
 
     Returns:
         None.
+
+    Notes:
+        - Constraint weight plugs are named "<driverNode>W<targetIndex>",
+          not "targetW0" — that generic name never exists for named drivers.
+        - Maya 2025/2026 create one constraint per driver (driver is always
+          W0); Maya 2027 merges both drivers into one constraint with two
+          targets (FK=W0, IK=W1). Resolving the index from targetList
+          handles both layouts.
     """
     ik_ctl = f"{side}{limb}IK_ctl"
     cmds.addAttr(ik_ctl, longName="fkik", attributeType="float", minValue=0, maxValue=1, defaultValue=1)
     # One reverse node serves the whole limb
     reverse = cmds.createNode("reverse")
     cmds.connectAttr(f"{ik_ctl}.fkik", f"{reverse}.inputX")
-    for fk_con, ik_con in constraints:
-        # Each constraint has a single target, so its weight is always targetW0
-        cmds.connectAttr(f"{reverse}.outputX", f"{fk_con}.targetW0")
-        cmds.connectAttr(f"{ik_ctl}.fkik", f"{ik_con}.targetW0")
+    joint_names = LIMB_JOINTS[limb]
+    for (fk_con, ik_con), name in zip(constraints, joint_names):
+        fk_joint = f"{side}{name}_fk_jnt"
+        ik_joint = f"{side}{name}_ik_jnt"
+        # Weight plugs follow the "<driverNode>W<targetIndex>" convention
+        # (e.g. L_legUp_fk_jntW0). The index comes from targetList because
+        # merged constraints (2027) put FK at slot 0 and IK at slot 1.
+        fk_targets = cmds.parentConstraint(fk_con, query=True, targetList=True)
+        ik_targets = cmds.parentConstraint(ik_con, query=True, targetList=True)
+        fk_plug = f"{fk_con}.{fk_joint}W{fk_targets.index(fk_joint)}"
+        ik_plug = f"{ik_con}.{ik_joint}W{ik_targets.index(ik_joint)}"
+        cmds.connectAttr(f"{reverse}.outputX", fk_plug)
+        cmds.connectAttr(f"{ik_ctl}.fkik", ik_plug)
 
 
 def build_limb(side="L_", limb="leg"):
