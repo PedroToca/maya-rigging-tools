@@ -42,6 +42,22 @@ Atomic scene-modifying tools — each does exactly one thing.
 | `builders/spine_builder.py` | Spline IK spine from 2 endpoints + editable curve — joints distributed via `pointOnCurve` (equidistant by design) |
 | `builders/face_rig_assistant.py` | *Planned* — driven keys / blend shapes in batch |
 
+### Phase 4 — Control library 🟢
+
+Reusable controller-shape library. Each control is stored as ONE `.mb`
+inside `library/_control_lib/` (the full `_off` offset stack), and the UI
+gives one click-to-import button per file. Exports only world-level nodes
+(Export Selection carries the whole parent hierarchy otherwise). Imports
+use a per-file namespace, merged into root when names are free, so
+clashes never fail. Importing is NOT undoable (Maya limitation).
+
+| Module | What it does |
+|---|---|
+| `library/paths.py` | Resolve package dir (`__file__`), create the controls folder |
+| `library/files.py` | List files, check name collisions, export selection to .mb |
+| `library/main.py` | `exportControl` / `getControllers` / `importControl` |
+| `library/gui.py` | Control Library window: import buttons, open-folder, reload, export |
+
 ## Usage
 
 Run inside Maya's Script Editor (Python tab):
@@ -56,6 +72,11 @@ check_zero_transforms()
 from builders.limb_builder import build_limb
 
 build_limb(side="L_", limb="leg")
+
+# Example: open the control library window
+from library.gui import open_library_window
+
+open_library_window()
 ```
 
 Or paste a tool's contents directly into the Script Editor and call its functions.

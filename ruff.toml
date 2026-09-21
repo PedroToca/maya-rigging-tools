@@ -1,0 +1,10 @@
+# Maya 2025+ embeds Python 3.11 — flag any newer syntax as incompatible
+target-version = "py311"
+line-length = 88
+
+[lint]
+# `import maya.cmds as cmds` is the standard Maya idiom (PLR0402);
+# script files carry the executable bit without shebangs (EXE002);
+# cmds raises mixed exception types, broad catches are the course
+# tool pattern for cmds.file (M2-L09.13) (BLE001)
+ignore = ["PLR0402", "EXE002", "BLE001"]

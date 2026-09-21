@@ -6,11 +6,12 @@ Maya rigging tools: QC validators, atomic setup tools, and rig builders for Auto
 
 ## Architecture & Data Flow
 
-Three isolated packages, no cross-imports between them, no `__init__.py` files. Interaction level escalates by directory:
+Four packages, no `__init__.py` files. `qc/`, `setup/`, `builders/` are isolated from each other (no cross-imports). `library/` is a layered stack where the modules DO import each other bottom-up (`paths` ← `files` ← `main` ← `gui`) but nothing imports out of it. Interaction level escalates by directory:
 
 - **`qc/`** — read-only validators. Each `check_*` scans the scene (`cmds.ls`) and prints a report; never modifies anything.
 - **`setup/`** — atomic writers. Each function does exactly one scene modification (create controller hierarchy, rename, constrain, mirror).
 - **`builders/`** — multi-step rig construction. `limb_builder.py` is data-driven via the `LIMB_JOINTS` dict (`{'leg': [...], 'arm': [...]}`) and builds a triple-chain (skin/FK/IK) limb with a reverse-node FK/IK switch. `spine_builder.py` and `face_rig_assistant.py` are planned, not yet written.
+- **`library/`** — control-shape library (M2-L09.12–17 course design, cmds UI instead of PySide2 since Maya 2025+ dropped PySide2). One `.mb` per control inside `library/_control_lib/`; `library/` modules raise on bad input (they run under `gui.py`, which catches and warns) — exception to the no-raise convention, by design. `.mb` files under `_control_lib/` are versioned on purpose.
 
 **Data flow in builders**: locator positions → joint chains → controls → constraints → FK/IK switch. `build_limb()` is the orchestrator.
 
@@ -23,6 +24,7 @@ Three isolated packages, no cross-imports between them, no `__init__.py` files. 
 | `qc/` | Phase 1 — read-only scene validation (6 tools, complete) |
 | `setup/` | Phase 2 — single-action scene modification (4 tools, complete) |
 | `builders/` | Phase 3 — multi-step rig builders (1 of 3 done) |
+| `library/` | Phase 4 — control-shape library: export/import `.mb` per control + cmds UI |
 
 ## Development Commands
 
