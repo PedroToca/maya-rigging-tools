@@ -1,0 +1,10 @@
+#!/bin/sh
+# Format + lint exactly what is being committed, re-stage format fixes.
+# ponytail: word-splitting on $files — repo has no spaces in paths;
+# switch to a quoted loop if that ever changes. Also re-add re-stages
+# whole files (breaks `git add -p` partial staging) — accepted for solo repo.
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.py')
+[ -z "$files" ] && exit 0
+uvx ruff format $files || exit 1
+uvx ruff check $files || exit 1
+git add $files
