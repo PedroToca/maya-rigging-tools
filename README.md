@@ -86,6 +86,61 @@ For `limb_builder`, the workflow is two-pass:
 2. Delete the locators-only pass and run `build_limb()` again to build the rig
    at those positions.
 
+## Shelf — PT_RigTools (one-click access)
+
+`shelf/pt_rigtools_shelf.py` generates a **PT_RigTools** shelf tab with one
+button per tool. The shelf is built from code — not saved as a prefs file —
+so it rebuilds itself if prefs are reset or the repo gains tools, and the
+buttons import straight from the repo clone (a `git pull` updates the tools
+instantly, nothing is copied into Maya).
+
+### Install (once per Maya version)
+
+1. Copy `shelf/pt_rigtools_shelf.py` into `<Documents>/maya/<version>/scripts/`
+   and check that `REPO_PATH` (top of the file) points at your clone.
+2. Optional autostart — add this line to `userSetup.mel` in that same folder:
+
+   ```mel
+   evalDeferred "python(\"import pt_rigtools_shelf; pt_rigtools_shelf.ensure_shelf()\")";
+   ```
+
+### Rebuild (after editing buttons or REPO_PATH)
+
+```python
+import importlib, pt_rigtools_shelf
+importlib.reload(pt_rigtools_shelf)
+pt_rigtools_shelf.ensure_shelf(rebuild=True)
+```
+
+The `reload` is required — a plain import reuses the cached module. The
+rebuild wipes the shelf buttons and regenerates exactly one per tool (Maya's
+`addNewShelfTab` restores saved prefs content, so deleting and recreating the
+tab duplicates every button).
+
+### Buttons and what they need from you
+
+A shelf button is a single click, so it fits three tiers: zero-argument
+actions are plain buttons; tools that need a couple of parameters ask with a
+small prompt or dialog; genuinely multi-step tools open a full window —
+a bare button can't collect multi-step input.
+
+| Button | Tool | Action | Input it needs |
+|---|---|---|---|
+| Sel Ctls | `qc/select_controllers` | Select all `*_ctl` in the scene | none |
+| Naming | `qc/naming_validator` | QC: controllers missing `L_/R_/C_` prefix | none |
+| Zero TF | `qc/zero_transform_check` | QC: non-zero translate/rotate at rest | none |
+| Unparent | `qc/unparented_controls` | QC: controllers outside the rig top group | none |
+| Jnt Orient | `qc/joint_orient_check` | QC: rotation in `.rotate` instead of `.jointOrient` | none |
+| Dbl TF | `qc/double_transform_detector` | QC: parent/child pairs both carrying transforms | none |
+| Make Ctl | `setup/controller_maker` | Create `_off/_auto/_grp/_ctl` control stack | prompt: name + side |
+| Rename L>R | `setup/rename_hierarchy` | Scene-wide `L_` -> `R_` flip (tool defaults) | none |
+| Rename UI | `ux/rename_ui` | Batch rename window — always preview first | own window |
+| Constrain | `setup/constraint_assistant` | Parent-constrain from selection | selection: driver(s) first, driven last |
+| Mirror Jnt | `setup/mirror_joint_tool` | Mirror selected joints across X, flipping `L_/R_` | selection |
+| Build Limb | `builders/limb_builder` | FK/IK triple-chain limb (two-pass) | dialog: side + limb |
+| Build Spine | `builders/spine_builder` | Spline IK spine from endpoints + editable curve | none |
+| Ctrl Library | `library/gui` | Control shape library — click to import saved controls | own window |
+
 ## Requirements
 
 - Autodesk Maya 2025+ (embedded Python 3.11)

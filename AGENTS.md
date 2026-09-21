@@ -25,6 +25,7 @@ Four packages, no `__init__.py` files. `qc/`, `setup/`, `builders/` are isolated
 | `setup/` | Phase 2 — single-action scene modification (4 tools, complete) |
 | `builders/` | Phase 3 — multi-step rig builders (1 of 3 done) |
 | `library/` | Phase 4 — control-shape library: export/import `.mb` per control + cmds UI |
+| `shelf/` | `pt_rigtools_shelf.py` — shelf generator (canonical copy; installed copy lives in Maya's `<version>/scripts`) |
 
 ## Development Commands
 
