@@ -42,7 +42,7 @@ def mirror_joint(joint, axis="X", search_replace=("L_", "R_")):
     mirror_args = {
         "X": {"mirrorYZ": True},
         "Y": {"mirrorXZ": True},
-        "Z": {"mirrorXY": True}
+        "Z": {"mirrorXY": True},
     }
 
     # .get() with a default keeps the tool working on unexpected axis input
@@ -52,9 +52,11 @@ def mirror_joint(joint, axis="X", search_replace=("L_", "R_")):
 
 def mirror_from_selection(axis="X", search_replace=("L_", "R_")):
     """
-    Brief: Mirror every joint in the current selection.
+    Brief: Mirror the top-most joints in the current selection.
 
-    mirrorJoint works on one joint at a time, so the selection is looped.
+    mirrorJoint works on one joint at a time and mirrors the whole descendant
+    chain, so only the top-most selected joints are mirrored — a selected
+    child whose parent is also selected would otherwise be mirrored twice.
 
     Args:
         axis (str): Symmetry axis. Defaults to "X". Valid: "X", "Y", "Z".
@@ -64,17 +66,27 @@ def mirror_from_selection(axis="X", search_replace=("L_", "R_")):
     Returns:
         None.
     """
-    joints = cmds.ls()
-    if not joints:
+    selected = cmds.ls(selection=True, type="joint", long=True)
+    if not selected:
         cmds.warning("Select the joints")
         return
+
+    # Only mirror the top-most selected joints: mirrorJoint duplicates the
+    # joint AND its whole descendant chain, so a selected child whose
+    # ancestor is also selected would be mirrored twice (duplicate copies).
+    # With long names, a child path starts with the ancestor path plus "|".
+    joints = [
+        j for j in selected if not any(j.startswith(other + "|") for other in selected)
+    ]
 
     mirror_args = {
         "X": {"mirrorYZ": True},
         "Y": {"mirrorXZ": True},
-        "Z": {"mirrorXY": True}
+        "Z": {"mirrorXY": True},
     }
     kwargs = mirror_args.get(axis, {"mirrorYZ": True})
 
     for joint in joints:
-        cmds.mirrorJoint(joint, mirrorBehavior=True, searchReplace=search_replace, **kwargs)
+        cmds.mirrorJoint(
+            joint, mirrorBehavior=True, searchReplace=search_replace, **kwargs
+        )
