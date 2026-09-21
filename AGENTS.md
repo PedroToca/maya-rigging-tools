@@ -75,7 +75,7 @@ Repo must be on `MAYA_SCRIPT_PATH` (or Maya's scripts dir) for imports to resolv
 - **Runtime**: Maya 2025+ embedded Python 3.11. Code is not runnable outside Maya (imports `maya.cmds`).
 - **Dependencies**: none beyond `maya.cmds`. Do not add external packages.
 - **Package manager**: none. No `requirements.txt`, `pyproject.toml`, or lock files — keep it that way.
-- **Formatting/lint**: ruff, run via `uvx ruff format .` / `uvx ruff check .` (no install — uvx caches the binary). `ruff.toml` pins `target-version = "py311"` so 3.12+ syntax that Maya would reject gets flagged; ignores `PLR0402` (Maya idiom `import maya.cmds as cmds`) and `EXE002`. A pre-commit hook lives at `.githooks/pre-commit` (versioned — formats+checks staged `.py` files and re-stages fixes). Prerequisite: `uv` must be on PATH or every commit fails with exit 127. Git never ships hooks enabled for security reasons, so after cloning run once: `git config core.hooksPath .githooks`.
+- **Formatting/lint**: ruff, run via `uvx ruff format .` / `uvx ruff check .` (no install — uvx caches the binary). `ruff.toml` pins `target-version = "py311"` so 3.12+ syntax that Maya would reject gets flagged; ignores `PLR0402` (Maya idiom `import maya.cmds as cmds`), `EXE002`, `BLE001` (cmds raises mixed exception types) and `UP031` (%-formatting baseline predating ruff 0.16 — new code prefers f-strings by convention). A pre-commit hook lives at `.githooks/pre-commit` (versioned — formats+checks staged `.py` files and re-stages fixes). Prerequisite: `uv` must be on PATH or every commit fails with exit 127. Git never ships hooks enabled for security reasons, so after cloning run once: `git config core.hooksPath .githooks`.
 - **License**: MIT (PedroToca, 2026).
 
 ## Testing & QA

@@ -6,5 +6,8 @@ line-length = 88
 # `import maya.cmds as cmds` is the standard Maya idiom (PLR0402);
 # script files carry the executable bit without shebangs (EXE002);
 # cmds raises mixed exception types, broad catches are the course
-# tool pattern for cmds.file (M2-L09.13) (BLE001)
-ignore = ["PLR0402", "EXE002", "BLE001"]
+# tool pattern for cmds.file (M2-L09.13) (BLE001);
+# UP031 pinned: the codebase predates ruff 0.16 defaults and uses
+# %-formatting throughout - new code should still prefer f-strings
+# (convention, not enforcement)
+ignore = ["PLR0402", "EXE002", "BLE001", "UP031"]
