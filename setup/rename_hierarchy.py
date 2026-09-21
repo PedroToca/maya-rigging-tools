@@ -44,9 +44,11 @@ def rename_in_hierarchy(root, search="L_", replace="R_"):
     """
     Brief: Rename nodes containing a pattern, scoped to a hierarchy.
 
-    ls(allDescendents=True) returns full paths with the parent first, so the
-    list is iterated in reverse (children before parents). Renaming a parent
-    first would invalidate the stored paths of its children.
+    ls() has no allDescendents flag (TypeError in Maya 2027) - the
+    canonical hierarchy walk is listRelatives(allDescendents=True), which
+    also returns full paths parent-first, so the list is iterated in
+    reverse (children before parents). Renaming a parent first would
+    invalidate the stored paths of its children.
 
     Args:
         root (str): Name of the hierarchy root node.
@@ -60,8 +62,11 @@ def rename_in_hierarchy(root, search="L_", replace="R_"):
         cmds.warning(f"Root '{root}' not found")
         return
 
-    # or [] guards against ls returning None on empty result
-    descendants = cmds.ls(root, allDescendents=True, type="transform") or []
+    # or [] guards against listRelatives returning None on empty result
+    descendants = (
+        cmds.listRelatives(root, allDescendents=True, fullPath=True, type="transform")
+        or []
+    )
     to_rename = [node for node in descendants if search in node]
 
     if not to_rename:
