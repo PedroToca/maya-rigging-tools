@@ -196,95 +196,111 @@ def launch(key):
 
 
 def _button_specs():
-    """One entry per shelf button: label, tooltip, icon, launcher key.
+    """One entry per shelf button: label, tooltip, icon, overlay, key.
 
     Icons are Maya built-ins (resolved via MAYA_BUTTON_PATH), verified
-    against Maya 2027's icons folder.
+    against Maya 2027's icons folder. overlay is a tiny text badge Maya
+    draws on the icon (imageOverlayLabel) - used to distinguish buttons
+    that share an icon family, e.g. the two rename tools.
     """
     return [
-        # label, annotation (tooltip), image, launch key
+        # label, annotation (tooltip), image, overlay label, launch key
         (
             "Sel Ctls",
             "Select all *_ctl controllers in the scene.",
             "select.xpm",
+            "",
             "select_ctl",
         ),
         (
             "Naming",
             "QC: controllers missing the L_/R_/C_ prefix.",
             "channels.png",
+            "",
             "naming",
         ),
         (
             "Zero TF",
             "QC: controllers with non-zero T/R at rest pose.",
             "ResetMode.png",
+            "",
             "zero_tf",
         ),
         (
             "Unparent",
             "QC: controllers outside the RIG top group.",
             "genericGroupIcon.xpm",
+            "",
             "unparented",
         ),
         (
             "Jnt Orient",
             "QC: rotation in .rotate instead of .jointOrient.",
             "pivotIcon.xpm",
+            "",
             "joint_orient",
         ),
         (
             "Dbl TF",
             "QC: parent/child pairs that both carry transforms.",
             "out_floatMath.png",
+            "",
             "double_tf",
         ),
         (
             "Make Ctl",
             "Create a controller (_off/_auto/_grp/_ctl hierarchy). Prompts for name+side.",
             "hollowBoxIcon.xpm",
+            "",
             "make_ctl",
         ),
         (
             "Rename L>R",
             "Scene-wide rename L_ -> R_ (tool defaults).",
             "text.xpm",
+            "",
             "rename",
         ),
         (
             "Rename UI",
             "Batch rename window: find/replace, prefix/suffix, numbering - always preview first.",
             "text.xpm",
+            "UI",
             "rename_ui",
         ),
         (
             "Constrain",
             "Parent-constrain from selection: driver(s) first, driven last.",
             "constrainedMotion.xpm",
+            "",
             "constraint",
         ),
         (
             "Mirror Jnt",
             "Mirror selected joints across X, flipping L_/R_.",
             "quickshadow.xpm",
+            "",
             "mirror",
         ),
         (
             "Build Limb",
             "FK/IK triple-chain limb builder (two-pass). Dialog for side/limb.",
             "HIKik.png",
+            "",
             "build_limb",
         ),
         (
             "Build Spine",
             "Spline IK spine from endpoints + editable curve.",
             "ikSplineManip.xpm",
+            "",
             "build_spine",
         ),
         (
             "Ctrl Library",
             "Control shape library: click a button to import a saved control (.mb) into the scene. Ctrl+E exports the selection to the library.",
             "pythonFamily.png",
+            "",
             "control_library",
         ),
     ]
@@ -293,15 +309,21 @@ def _button_specs():
 def ensure_shelf(rebuild=False):
     """Create the PT_RigTools shelf if missing (or force rebuild).
 
-    Only creates when missing, so manual edits made later in the Shelf
-    Editor are respected across restarts. rebuild=True wipes the shelf
-    BUTTONS and regenerates them - use after editing this file.
+    Skips regeneration when the tab already holds OUR buttons, so manual
+    edits made later in the Shelf Editor are respected across restarts.
+    rebuild=True wipes the shelf BUTTONS and regenerates them - use
+    after editing this file.
 
     GOTCHA (hit in practice): addNewShelfTab RESTORES the shelf from
     its saved prefs file (prefs/shelves/shelf_PT_RigTools.mel) when one
     exists, so a "fresh" tab comes pre-loaded with the OLD buttons.
     Recreating the tab on rebuild used to duplicate every button. The
     fix: keep the tab, wipe its children, add exactly one per spec.
+
+    GOTCHA 2 (hit in practice): a tab restored from an OLD prefs file
+    can hold zero generator-made buttons (pre-generator content or a
+    stale manual build). "exists" alone would keep it forever - the
+    ours-check below regenerates it instead.
     """
     import maya.cmds as cmds
     import maya.mel as mel
@@ -315,7 +337,19 @@ def ensure_shelf(rebuild=False):
         return
 
     if cmds.shelfLayout(SHELF_NAME, exists=True):
-        if not rebuild:
+        # Is any button in the tab one of ours (command imports this
+        # module)? If NONE is, the content predates the generator or
+        # was assembled by hand - regenerate. If at least one is ours,
+        # respect the tab as-is unless rebuild=True.
+        ours = False
+        for child in cmds.layout(SHELF_NAME, query=True, childArray=True) or []:
+            cmd = cmds.shelfButton(child, query=True, command=True) or ""
+            if isinstance(cmd, list):
+                cmd = cmd[0] if cmd else ""
+            if "pt_rigtools_shelf" in cmd:
+                ours = True
+                break
+        if ours and not rebuild:
             return
     else:
         # addNewShelfTab creates the tab AND registers it in shelf prefs
@@ -331,8 +365,8 @@ def ensure_shelf(rebuild=False):
     for child in cmds.layout(SHELF_NAME, query=True, childArray=True) or []:
         cmds.deleteUI(child)
 
-    for label, ann, image, key in _button_specs():
-        cmds.shelfButton(
+    for label, ann, image, overlay, key in _button_specs():
+        btn = cmds.shelfButton(
             parent=SHELF_NAME,
             label=label,
             annotation=ann,
@@ -340,3 +374,7 @@ def ensure_shelf(rebuild=False):
             sourceType="python",
             command='import pt_rigtools_shelf as pt; pt.launch("%s")' % key,
         )
+        if overlay:
+            # Tiny text badge drawn on the icon - distinguishes buttons
+            # sharing an icon family (see _button_specs docstring).
+            cmds.shelfButton(btn, edit=True, imageOverlayLabel=overlay)
