@@ -135,6 +135,7 @@ a bare button can't collect multi-step input.
 | Make Ctl | `setup/controller_maker` | Create `_off/_auto/_grp/_ctl` control stack | prompt: name + side |
 | Rename L>R | `setup/rename_hierarchy` | Scene-wide `L_` -> `R_` flip (tool defaults) | none |
 | Rename UI | `ux/rename_ui` | Batch rename window — always preview first | own window |
+| Color UI | `ux/color_ui` | Color the selected controllers from a 32-swatch palette window (drawing overrides, one undo) | own window + selection |
 | Constrain | `setup/constraint_assistant` | Parent-constrain from selection | selection: driver(s) first, driven last |
 | Mirror Jnt | `setup/mirror_joint_tool` | Mirror selected joints across X, flipping `L_/R_` | selection |
 | Build Limb | `builders/limb_builder` | FK/IK triple-chain limb (two-pass) | dialog: side + limb |

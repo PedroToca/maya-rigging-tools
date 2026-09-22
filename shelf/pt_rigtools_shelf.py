@@ -163,6 +163,9 @@ def launch(key):
     elif key == "rename_ui":
         # Batch rename window (ux package, Fase 4 UI over Fase 2 logic).
         _call("ux.rename_ui", "open_rename_window")
+    elif key == "color_ui":
+        # Controller color window: 32 real index swatches, click to apply.
+        _call("ux.color_ui", "open_color_window")
     elif key == "constraint":
         # Driver(s) first, driven last, in the selection.
         _call(
@@ -267,6 +270,13 @@ def _button_specs():
             "text.xpm",
             "UI",
             "rename_ui",
+        ),
+        (
+            "Color UI",
+            "Color the selected controllers: 32-swatch palette window, one click applies (single undo).",
+            "out_colorConstant.png",
+            "",
+            "color_ui",
         ),
         (
             "Constrain",
